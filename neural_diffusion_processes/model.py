@@ -115,6 +115,10 @@ class MultiHeadAttention(hk.Module):
         q = rearrange(q, rearrange_arg, num_heads=self.num_heads, depth=self.depth)
         k = rearrange(k, rearrange_arg, num_heads=self.num_heads, depth=self.depth)
         v = rearrange(v, rearrange_arg, num_heads=self.num_heads, depth=self.depth)
+        
+        print("q shape: ", q.shape)
+        print("k shape", k.shape)
+        print("v shape", v.shape)
 
         # scaled_attention, attention_weights = scaled_dot_product_attention(
         if mask is not None:
@@ -130,6 +134,7 @@ class MultiHeadAttention(hk.Module):
             scaled_attention,
             "... num_heads seq_len depth -> ... seq_len (num_heads depth)",
         )
+        print("Output shape: ", scaled_attention.shape)
         output = hk.Linear(output_size=self.d_model)(
             scaled_attention
         )  # (batch_size, seq_len_q, d_model)

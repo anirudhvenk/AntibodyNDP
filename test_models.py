@@ -7,8 +7,8 @@ from jax import random
 import haiku as hk
 
 def forward_fn(X, Y, T):
-  mod = AttentionModel(n_layers=4, hidden_dim=8, num_heads=8, output_dim=1, init_zero=False)
-  return mod(X, Y, T, None)
+    mod = AttentionModel(n_layers=4, hidden_dim=8, num_heads=8, output_dim=1, init_zero=False)
+    return mod(X, Y, T, None)
 
 seed = 42
 key = random.PRNGKey(seed)
@@ -26,17 +26,23 @@ T = jnp.asarray([3])
 # T = random.randint(key, (1,), 0, 10)
 rng = None
 params = forward.init(key, X, Y, T)
+
+for layer, weights in params.items():
+    print(f'{layer}: {weights["w"].shape}')
+  
+
+# print(params)
 # print(X)
 # print(Y)
 # print(T)
-print(forward.apply(params, key, X,Y,T))
+# print(forward.apply(params, key, X,Y,T))
 
-new_attn_model = NewAttentionModel(4, 8, 8, 1)
-X = torch.ones((1,3,2))
-# Y = random.normal(subkey2, (1,3,1))
-Y = torch.ones((1,3,1))
-T = torch.as_tensor([3])
-print(new_attn_model(X, Y, T, None))
+# new_attn_model = NewAttentionModel(4, 8, 8, 1)
+# X = torch.ones((1,3,2))
+# # Y = random.normal(subkey2, (1,3,1))
+# Y = torch.ones((1,3,1))
+# T = torch.as_tensor([3])
+# print(new_attn_model(X, Y, T, None))
 
 
 

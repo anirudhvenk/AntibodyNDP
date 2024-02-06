@@ -4,7 +4,6 @@ def expand_to(a, b):
     new_shape = a.shape + (1,) * (b.ndim - a.ndim)
     return a.reshape(new_shape)
 
-
 def cosine_schedule(beta_start, beta_end, timesteps, s=0.008, **kwargs):
     x = torch.linspace(0, timesteps, timesteps + 1)
     ft = torch.cos(((x / timesteps) + s) / (1 + s) * torch.pi * 0.5) ** 2
@@ -13,7 +12,6 @@ def cosine_schedule(beta_start, beta_end, timesteps, s=0.008, **kwargs):
     betas = torch.clip(betas, 0.0001, 0.9999)
     betas = (betas - betas.min()) / (betas.max() - betas.min())
     return betas * (beta_end - beta_start) + beta_start
-
 
 class GaussianDiffusion:
     def __init__(self, betas):

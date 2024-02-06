@@ -40,9 +40,9 @@ def loss_fn(params, batch: Batch, key):
     kwargs = dict(num_timesteps=500, loss_type="l1")
     return loss(process, net_with_params, batch, key, **kwargs)
 
-X = jnp.ones((2,3,2))
-Y = jnp.ones((2,3,1))
-T = jnp.asarray([3, 3])
+X = jnp.ones((1,3,2))
+Y = jnp.ones((1,3,1))
+T = jnp.asarray([3])
 
 state_key = random.PRNGKey(42)
 key, init_rng = jax.random.split(state_key)
@@ -50,6 +50,8 @@ t = 1. * jnp.zeros((X.shape[0]))
 initial_params = network.init(
     init_rng, t=T, y=Y, x=X, mask=None
 )
+
+print(initial_params)
 
 new_key, loss_key = jax.random.split(state_key)
 batch = Batch(x_target=X, y_target=Y)
