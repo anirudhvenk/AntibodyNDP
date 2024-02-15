@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 # import tensorflow as tf
 import numpy as np
 
-def get_image_grid_inputs(size, a):
+def get_image_grid_inputs(size, a=2):
     x1 = torch.linspace(a, -a, size)
     x2 = torch.linspace(-a, a, size)
     x1, x2 = torch.meshgrid(x2, x1)

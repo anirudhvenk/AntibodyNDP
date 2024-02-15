@@ -25,9 +25,9 @@ ema_model = AveragedModel(new_attn_model, multi_avg_fn=get_ema_multi_avg_fn(ema_
 with open('./data/MNIST/mnist.pkl', 'rb') as f:
     mnist_data = pickle.load(f)
     
-mnist_data = torch.stack(mnist_data).squeeze(1)
+mnist_data = torch.stack(mnist_data[:20000]).squeeze(1)
 dataset = CustomImageDataset(mnist_data, 28, 1)
-train_dataloader = DataLoader(dataset, batch_size=10, shuffle=True)
+train_dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
 for e in range(20):
     cum_loss = 0
@@ -40,4 +40,7 @@ for e in range(20):
         ema_model.update_parameters(new_attn_model)
         cum_loss += loss_val
         
-    print(loss_val/len(train_dataloader))
+    print("Loss: ", loss_val/len(train_dataloader))
+    
+    ckpt = (ema_model.state_dict(), optimizer.state_dict())
+    torch.save(ckpt, f'weights/model.ckpt.{e}')

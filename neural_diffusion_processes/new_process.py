@@ -4,6 +4,17 @@ def expand_to(a, b):
     new_shape = a.shape + (1,) * (b.ndim - a.ndim)
     return a.reshape(new_shape)
 
+def scan(f, init, xs, length=None):
+    if xs is None:
+        xs = [None] * length
+    carry = init
+    ys = []
+    for x in xs:
+        carry, y = f(carry, x)
+        ys.append(y)
+
+    return carry, None
+
 def cosine_schedule(beta_start, beta_end, timesteps, s=0.008, **kwargs):
     x = torch.linspace(0, timesteps, timesteps + 1)
     ft = torch.cos(((x / timesteps) + s) / (1 + s) * torch.pi * 0.5) ** 2
@@ -54,6 +65,67 @@ class GaussianDiffusion:
         v = beta_t * torch.ones_like(yt) * (t > 0)
         v = torch.maximum(v, torch.ones_like(v) * 1e-3)
         return m, v
+    
+    def conditional_sample(
+        self,
+        x,
+        mask,
+        *,
+        x_context,
+        y_context,
+        mask_context,
+        model_fn,
+        num_inner_steps=5
+    ):
+        if mask is None:
+            mask = torch.zeros_like(x[:, 0])
+
+        if mask_context is None:
+            mask_context = torch.zeros_like(x_context[:, 0])
+
+        x_augmented = torch.concatenate([x_context, x], axis=0)
+        mask_augmented = torch.concatenate([mask_context, mask], axis=0)
+        num_context = len(x_context)
+
+        def repaint_inner(yt_target, t):
+            # one step backward: t -> t-1
+            yt_context = self.forward(y_context, t)[0]
+            # print(yt_context.shape, yt_target.shape)
+            y_augmented = torch.concatenate([yt_context, yt_target], axis=0)
+            # print("T shape: ", t.shape)
+            # print("Y shape: ", y_augmented.shape)
+            # print("X shape: ", x_augmented.shape)
+            # print("mask shape: ", mask_augmented.shape)
+            noise_hat = model_fn(x_augmented.unsqueeze(0), y_augmented.unsqueeze(0), t.unsqueeze(0), mask_augmented.unsqueeze(0)).squeeze(0)
+            # print(noise_hat.shape)
+            y = self.ddpm_backward_step(noise=noise_hat, yt=y_augmented, t=t)
+            y = y[num_context:]
+            # one step forward: t-1 -> t
+            z = torch.randn(size=y.shape)
+            beta__t_minus_1 = expand_to(self.betas[t - 1], y)
+            y = torch.sqrt(1.0 - beta__t_minus_1) * y + torch.sqrt(beta__t_minus_1) * z
+            return y, None
+
+        def repaint_outer(y, t):
+            # loop
+            # print(y.shape)
+            # print("Timestep: ", t.item())
+            ts = torch.ones((num_inner_steps,), dtype=torch.int64) * t
+            y, _ = scan(repaint_inner, y, ts)
+
+            # step backward: t -> t-1
+            yt_context = self.forward(y_context, t)[0]
+            y_augmented = torch.concatenate([yt_context, y], axis=0)
+            noise_hat = model_fn(x_augmented.unsqueeze(0), y_augmented.unsqueeze(0), t.unsqueeze(0), mask_augmented.unsqueeze(0)).squeeze(0)
+            y = self.ddpm_backward_step(noise=noise_hat, yt=y_augmented, t=t)
+            y = y[num_context:]
+            return y, None
+        
+        ts = torch.flip(torch.arange(len(self.betas)), [0])
+        yT_target = torch.randn(len(x), y_context.shape[-1])
+
+        y, _ = scan(repaint_outer, yT_target, ts[:-1])
+        return y
 
 def loss(process, network, X, Y, mask, num_timesteps, loss_type):
     if loss_type == "l1":
